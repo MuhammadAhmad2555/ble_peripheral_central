@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.ParcelUuid
 import android.util.Log
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.EventChannel
@@ -665,9 +666,50 @@ class BlePeripheralCentralPlugin :
     @SuppressLint("MissingPermission")
     private fun stopAll() {
         try {
-            stopPeripheral(Result { })
-            stopScan(Result { })
-            disconnectAll(Result { })
+            // Stop peripheral
+            advertiseCallback?.let {
+                try {
+                    advertiser?.stopAdvertising(it)
+                } catch (e: Exception) {
+                    log("Error stopping advertising: ${e.message}")
+                }
+                advertiseCallback = null
+            }
+            
+            try {
+                gattServer?.clearServices()
+                gattServer?.close()
+            } catch (e: Exception) {
+                log("Error closing GATT server: ${e.message}")
+            }
+            gattServer = null
+            subscribers.clear()
+            advertiser = null
+            
+            // Stop scanning
+            scanCallback?.let {
+                try {
+                    scanner?.stopScan(it)
+                } catch (e: Exception) {
+                    log("Error stopping scan: ${e.message}")
+                }
+                scanCallback = null
+            }
+            isScanning = false
+            
+            // Disconnect all clients
+            val deviceIds = gattClients.keys.toList()
+            deviceIds.forEach { deviceId ->
+                try {
+                    val gatt = gattClients.remove(deviceId)
+                    connectedDevices.remove(deviceId)
+                    deviceCallbacks.remove(deviceId)
+                    gatt?.disconnect()
+                    gatt?.close()
+                } catch (e: Exception) {
+                    log("Error disconnecting device $deviceId: ${e.message}")
+                }
+            }
         } catch (e: Exception) {
             log("Error stopping all: ${e.message}")
         }
