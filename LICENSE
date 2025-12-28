@@ -1,4 +1,4 @@
-MIT License
+MIT License with Attribution
 
 Copyright (c) 2024 Muhammad Ahmad
 
@@ -11,6 +11,24 @@ furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
+
+**ATTRIBUTION REQUIREMENT**: If you use this Software in your project, you must
+include attribution to this Software and provide a link to the original repository
+(https://github.com/MuhammadAhmad2555/ble_peripheral_central) in one or more of
+the following places:
+- Your project's README file
+- Your project's documentation
+- Your project's "About" or "Credits" section
+- Your application's "About" screen or similar user-facing documentation
+
+The attribution should include:
+- The name of this Software: "ble_peripheral_central"
+- A link to the repository: https://github.com/MuhammadAhmad2555/ble_peripheral_central
+- The author: "Muhammad Ahmad" (optional but appreciated)
+
+Example attribution:
+"This project uses ble_peripheral_central by Muhammad Ahmad
+(https://github.com/MuhammadAhmad2555/ble_peripheral_central)"
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,

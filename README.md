@@ -588,7 +588,15 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License with Attribution** - see the [LICENSE](LICENSE) file for details.
+
+**Attribution Requirement**: If you use this plugin in your project, you must include attribution with a link to the repository in your project's README, documentation, or About section.
+
+**Example attribution:**
+```
+This project uses ble_peripheral_central by Muhammad Ahmad
+(https://github.com/MuhammadAhmad2555/ble_peripheral_central)
+```
 
 ## Author
 
