@@ -9,7 +9,7 @@ Pod::Spec.new do |s|
   s.description      = <<-DESC
 A Flutter plugin that enables a mobile device to simultaneously act as both a Bluetooth Low Energy (BLE) Peripheral (server/advertiser) and a BLE Central (client/scanner), enabling peer-to-peer mesh networking scenarios.
                        DESC
-  s.homepage         = 'https://github.com/muhammadahmad/ble_peripheral_central'
+  s.homepage         = 'https://github.com/MuhammadAhmad2555/ble_peripheral_central'
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Your Company' => 'email@example.com' }
   s.source           = { :path => '.' }

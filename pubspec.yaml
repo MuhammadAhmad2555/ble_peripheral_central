@@ -1,7 +1,7 @@
 name: ble_peripheral_central
 description: A Flutter plugin that enables a mobile device to simultaneously act as both a Bluetooth Low Energy (BLE) Peripheral and a BLE Central, enabling peer-to-peer mesh networking scenarios.
 version: 1.0.0
-homepage: https://github.com/muhammadahmad/ble_peripheral_central
+homepage: https://github.com/MuhammadAhmad2555/ble_peripheral_central
 
 environment:
   sdk: ^3.9.2

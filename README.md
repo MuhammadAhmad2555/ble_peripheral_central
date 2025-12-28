@@ -2,8 +2,9 @@
 
 A production-ready Flutter plugin that enables a mobile device to simultaneously act as both a **Bluetooth Low Energy (BLE) Peripheral** (server/advertiser) and a **BLE Central** (client/scanner). This dual-mode capability enables peer-to-peer mesh networking scenarios.
 
-[![pub package](https://img.shields.io/pub/v/ble_peripheral_central.svg)](https://pub.dev/packages/ble_peripheral_central)
+[![GitHub](https://img.shields.io/github/stars/MuhammadAhmad2555/ble_peripheral_central?style=social)](https://github.com/MuhammadAhmad2555/ble_peripheral_central)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub repository](https://img.shields.io/badge/GitHub-Repository-blue)](https://github.com/MuhammadAhmad2555/ble_peripheral_central)
 
 ## Features
 
@@ -22,7 +23,19 @@ A production-ready Flutter plugin that enables a mobile device to simultaneously
 
 ## Installation
 
-Add this to your package's `pubspec.yaml` file:
+### Option 1: From GitHub (Current)
+
+Add this to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  ble_peripheral_central:
+    git:
+      url: https://github.com/MuhammadAhmad2555/ble_peripheral_central.git
+      ref: main
+```
+
+### Option 2: From pub.dev (When published)
 
 ```yaml
 dependencies:
@@ -35,14 +48,16 @@ Then run:
 flutter pub get
 ```
 
-## Setup
+## Quick Start
 
-### Android
+### 1. Configure Permissions
 
-Add the following permissions to your `android/app/src/main/AndroidManifest.xml`:
+#### Android
+
+Add to `android/app/src/main/AndroidManifest.xml`:
 
 ```xml
-<manifest>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Bluetooth permissions for Android 12+ (API 31+) -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation"
@@ -52,23 +67,31 @@ Add the following permissions to your `android/app/src/main/AndroidManifest.xml`
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
         android:maxSdkVersion="32" />
     
-    <!-- Legacy Bluetooth permissions for older Android versions -->
+    <!-- Legacy Bluetooth permissions -->
     <uses-permission android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
     
-    <!-- Location permission required for BLE scanning -->
+    <!-- Location permission (required for scanning) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 </manifest>
 ```
 
-**Important**: You must request runtime permissions before using BLE features. Use a package like `permission_handler` to request permissions at runtime.
+Ensure minimum SDK in `android/app/build.gradle`:
 
-### iOS
+```gradle
+android {
+    defaultConfig {
+        minSdkVersion 24
+    }
+}
+```
 
-Add the following keys to your `ios/Runner/Info.plist`:
+#### iOS
+
+Add to `ios/Runner/Info.plist`:
 
 ```xml
 <key>NSBluetoothAlwaysUsageDescription</key>
@@ -77,59 +100,82 @@ Add the following keys to your `ios/Runner/Info.plist`:
 <string>This app needs Bluetooth to advertise to nearby devices</string>
 ```
 
-**Note**: On iOS, you must request Bluetooth permissions at runtime before using BLE features.
+### 2. Request Runtime Permissions
 
-## Usage
+Install `permission_handler`:
 
-### Basic Setup
+```yaml
+dependencies:
+  permission_handler: ^11.0.0
+```
+
+Request permissions in your code:
+
+```dart
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
+
+Future<void> requestBluetoothPermissions() async {
+  if (Platform.isAndroid) {
+    await Permission.bluetoothScan.request();
+    await Permission.bluetoothAdvertise.request();
+    await Permission.bluetoothConnect.request();
+    await Permission.location.request(); // Required for scanning
+  }
+  // iOS permissions are requested automatically
+}
+```
+
+### 3. Basic Usage
 
 ```dart
 import 'package:ble_peripheral_central/ble_peripheral_central.dart';
 import 'dart:typed_data';
 
+// Create instance
 final ble = BlePeripheralCentral();
 
-// Enable logging (optional, for debugging)
+// Enable logging (optional)
 await ble.enableLogs(true);
 
-// Check if Bluetooth is enabled
+// Check Bluetooth state
 bool isOn = await ble.isBluetoothOn();
 if (!isOn) {
   print('Please enable Bluetooth');
   return;
 }
 
-// Listen to BLE events
+// Listen to events
 ble.events.listen((event) {
-  switch (event['type']) {
-    case 'scanResult':
-      print('Device found: ${event['deviceId']}, RSSI: ${event['rssi']}');
-      break;
-    case 'connected':
-      print('Connected to: ${event['deviceId']}');
-      break;
-    case 'notification':
-      final data = event['value'] as Uint8List;
-      print('Received notification: $data');
-      break;
-    case 'rx':
-      final data = event['value'] as Uint8List;
-      print('Received write: $data');
-      break;
-  }
+  print('Event: ${event['type']}');
+  // Handle different event types...
 });
 ```
 
-### Peripheral Mode (Server/Advertiser)
+## Usage Examples
+
+### Example 1: Act as Peripheral (Server)
 
 ```dart
-// Define your service and characteristic UUIDs
+// Define UUIDs
 const String serviceUuid = '0000180f-0000-1000-8000-00805f9b34fb';
 const String txUuid = '00002a19-0000-1000-8000-00805f9b34fb'; // For notifications
 const String rxUuid = '00002a19-0000-1000-8000-00805f9b34fb'; // For writes
 
-// Start advertising as a peripheral
+// Start advertising
 await ble.startPeripheral(serviceUuid, txUuid, rxUuid);
+
+// Listen for connections and data
+ble.events.listen((event) {
+  if (event['type'] == 'server_connected') {
+    print('Central connected: ${event['deviceId']}');
+  }
+  
+  if (event['type'] == 'rx') {
+    final data = event['value'] as Uint8List;
+    print('Received: $data');
+  }
+});
 
 // Send notification to all connected centrals
 final data = Uint8List.fromList([72, 101, 108, 108, 111]); // "Hello"
@@ -139,187 +185,343 @@ await ble.sendNotification(txUuid, data);
 await ble.stopPeripheral();
 ```
 
-### Central Mode (Client/Scanner)
+### Example 2: Act as Central (Client)
 
 ```dart
-// Start scanning for devices (empty string scans for all devices)
-await ble.startScan(serviceUuid); // Or use '' for all devices
+// Start scanning (empty string = scan all devices)
+await ble.startScan(''); // Or filter by serviceUuid
 
-// When a device is found, connect to it
-final deviceId = 'AA:BB:CC:DD:EE:FF'; // Android MAC address
-// or
-final deviceId = '12345678-1234-1234-1234-123456789ABC'; // iOS UUID
-
-await ble.connect(deviceId);
-
-// Write to a characteristic on the connected device
-final data = Uint8List.fromList([72, 101, 108, 108, 111]);
-await ble.writeCharacteristic(deviceId, rxUuid, data);
-
-// Request MTU change (Android only, iOS reports current MTU)
-await ble.requestMtu(deviceId, mtu: 512);
-
-// Check connection status
-bool connected = await ble.isDeviceConnected(deviceId);
-List<String> connectedDevices = await ble.getConnectedDevices();
-
-// Disconnect
-await ble.disconnect(deviceId);
-
-// Or disconnect all
-await ble.disconnectAll();
+// Listen for scan results
+ble.events.listen((event) {
+  if (event['type'] == 'scanResult') {
+    final deviceId = event['deviceId'] as String;
+    final name = event['name'] as String;
+    final rssi = event['rssi'] as int;
+    print('Found: $name ($deviceId) RSSI: $rssi');
+    
+    // Connect to device
+    ble.connect(deviceId);
+  }
+  
+  if (event['type'] == 'connected') {
+    final deviceId = event['deviceId'] as String;
+    print('Connected to: $deviceId');
+    
+    // Write to device
+    final data = Uint8List.fromList([72, 101, 108, 108, 111]);
+    await ble.writeCharacteristic(deviceId, rxUuid, data);
+  }
+  
+  if (event['type'] == 'notification') {
+    final data = event['value'] as Uint8List;
+    print('Notification received: $data');
+  }
+});
 
 // Stop scanning
 await ble.stopScan();
 ```
 
-### Complete Example: Two-Way Communication
+### Example 3: Dual Mode (Both Simultaneously)
 
 ```dart
+// Start both peripheral and central modes
+await ble.startPeripheral(serviceUuid, txUuid, rxUuid);
+await ble.startScan(serviceUuid);
+
+// Handle all events
+ble.events.listen((event) {
+  switch (event['type']) {
+    case 'server_connected':
+      // Someone connected to us (peripheral mode)
+      print('Central connected: ${event['deviceId']}');
+      break;
+      
+    case 'connected':
+      // We connected to someone (central mode)
+      print('Connected to peripheral: ${event['deviceId']}');
+      break;
+      
+    case 'rx':
+      // Received data as peripheral
+      final data = event['value'] as Uint8List;
+      print('Received as peripheral: $data');
+      break;
+      
+    case 'notification':
+      // Received notification as central
+      final data = event['value'] as Uint8List;
+      print('Received as central: $data');
+      break;
+  }
+});
+```
+
+### Example 4: Complete App with UI
+
+```dart
+import 'package:flutter/material.dart';
 import 'package:ble_peripheral_central/ble_peripheral_central.dart';
 import 'dart:async';
 import 'dart:typed_data';
 
-class BleManager {
+class BleDemoPage extends StatefulWidget {
+  const BleDemoPage({super.key});
+
+  @override
+  State<BleDemoPage> createState() => _BleDemoPageState();
+}
+
+class _BleDemoPageState extends State<BleDemoPage> {
   final BlePeripheralCentral ble = BlePeripheralCentral();
-  StreamSubscription? eventSubscription;
+  StreamSubscription? _eventSubscription;
   
-  Future<void> initialize() async {
-    // Enable logging
+  static const String serviceUuid = '0000180f-0000-1000-8000-00805f9b34fb';
+  static const String txUuid = '00002a19-0000-1000-8000-00805f9b34fb';
+  static const String rxUuid = '00002a19-0000-1000-8000-00805f9b34fb';
+  
+  bool _isPeripheralActive = false;
+  bool _isScanning = false;
+  List<String> _discoveredDevices = [];
+  List<String> _connectedDevices = [];
+  
+  @override
+  void initState() {
+    super.initState();
+    _initializeBle();
+  }
+  
+  Future<void> _initializeBle() async {
+    // Request permissions first
+    // await requestBluetoothPermissions();
+    
     await ble.enableLogs(true);
     
-    // Listen to events
-    eventSubscription = ble.events.listen(_handleEvent);
-    
-    // Check Bluetooth
     if (!await ble.isBluetoothOn()) {
-      throw Exception('Bluetooth is not enabled');
+      print('Bluetooth is not enabled');
+      return;
     }
-  }
-  
-  void _handleEvent(Map<String, dynamic> event) {
-    switch (event['type']) {
-      case 'server_connected':
-        print('Central connected: ${event['deviceId']}');
-        break;
-        
-      case 'rx':
-        final data = event['value'] as Uint8List;
-        final deviceId = event['deviceId'] as String;
-        print('Received from $deviceId: $data');
-        // Echo back
-        _sendResponse(deviceId, data);
-        break;
-        
-      case 'connected':
-        print('Connected to peripheral: ${event['deviceId']}');
-        break;
-        
-      case 'notification':
-        final data = event['value'] as Uint8List;
-        print('Received notification: $data');
-        break;
-        
-      case 'scanResult':
-        final deviceId = event['deviceId'] as String;
-        print('Found device: $deviceId');
-        // Auto-connect (optional)
-        // ble.connect(deviceId);
-        break;
-    }
-  }
-  
-  Future<void> startAsPeripheral() async {
-    const serviceUuid = '0000180f-0000-1000-8000-00805f9b34fb';
-    const txUuid = '00002a19-0000-1000-8000-00805f9b34fb';
-    const rxUuid = '00002a19-0000-1000-8000-00805f9b34fb';
     
-    await ble.startPeripheral(serviceUuid, txUuid, rxUuid);
+    // Listen to events
+    _eventSubscription = ble.events.listen((event) {
+      setState(() {
+        switch (event['type']) {
+          case 'peripheral_started':
+            _isPeripheralActive = true;
+            break;
+          case 'peripheral_stopped':
+            _isPeripheralActive = false;
+            break;
+          case 'scan_started':
+            _isScanning = true;
+            _discoveredDevices.clear();
+            break;
+          case 'scan_stopped':
+            _isScanning = false;
+            break;
+          case 'scanResult':
+            final deviceId = event['deviceId'] as String;
+            if (!_discoveredDevices.contains(deviceId)) {
+              _discoveredDevices.add(deviceId);
+            }
+            break;
+          case 'connected':
+            final deviceId = event['deviceId'] as String;
+            if (!_connectedDevices.contains(deviceId)) {
+              _connectedDevices.add(deviceId);
+            }
+            break;
+          case 'disconnected':
+            final deviceId = event['deviceId'] as String;
+            _connectedDevices.remove(deviceId);
+            break;
+        }
+      });
+    });
   }
   
-  Future<void> startScanning() async {
-    const serviceUuid = '0000180f-0000-1000-8000-00805f9b34fb';
-    await ble.startScan(serviceUuid);
+  @override
+  void dispose() {
+    _eventSubscription?.cancel();
+    ble.stopAll();
+    super.dispose();
   }
   
-  Future<void> _sendResponse(String deviceId, Uint8List data) async {
-    // This would be used in peripheral mode
-    const txUuid = '00002a19-0000-1000-8000-00805f9b34fb';
-    await ble.sendNotification(txUuid, data);
-  }
-  
-  Future<void> cleanup() async {
-    await eventSubscription?.cancel();
-    await ble.stopAll();
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('BLE Demo')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Peripheral Controls
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    const Text('Peripheral Mode', style: TextStyle(fontSize: 18)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isPeripheralActive ? null : () async {
+                              await ble.startPeripheral(serviceUuid, txUuid, rxUuid);
+                            },
+                            child: const Text('Start Peripheral'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isPeripheralActive ? () async {
+                              await ble.stopPeripheral();
+                            } : null,
+                            child: const Text('Stop Peripheral'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Central Controls
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    const Text('Central Mode', style: TextStyle(fontSize: 18)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isScanning ? null : () async {
+                              await ble.startScan(serviceUuid);
+                            },
+                            child: const Text('Start Scan'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isScanning ? () async {
+                              await ble.stopScan();
+                            } : null,
+                            child: const Text('Stop Scan'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_discoveredDevices.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      const Text('Discovered Devices:'),
+                      ..._discoveredDevices.map((deviceId) => ListTile(
+                        title: Text(deviceId),
+                        trailing: ElevatedButton(
+                          onPressed: () => ble.connect(deviceId),
+                          child: const Text('Connect'),
+                        ),
+                      )),
+                    ],
+                    if (_connectedDevices.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      const Text('Connected Devices:'),
+                      ..._connectedDevices.map((deviceId) => ListTile(
+                        title: Text(deviceId),
+                        trailing: ElevatedButton(
+                          onPressed: () => ble.disconnect(deviceId),
+                          child: const Text('Disconnect'),
+                        ),
+                      )),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 ```
-
-## Event Types
-
-The plugin emits events through the `events` stream. All events have a `type` field:
-
-| Event Type | Fields | Description |
-|------------|--------|-------------|
-| `peripheral_started` | - | Peripheral advertising started |
-| `peripheral_stopped` | - | Peripheral advertising stopped |
-| `advertising_started` | - | Advertising successfully started (Android) |
-| `advertising_failed` | `code` (int) | Advertising failed (Android) |
-| `server_connected` | `deviceId`, `name` | Central connected to this peripheral |
-| `server_disconnected` | `deviceId` | Central disconnected from this peripheral |
-| `rx` | `charUuid`, `value` (Uint8List), `deviceId` | Received write on RX characteristic |
-| `scan_started` | - | Scanning started |
-| `scan_stopped` | - | Scanning stopped |
-| `scanResult` | `deviceId`, `name`, `rssi` | Device discovered during scan |
-| `scan_failed` | `code` (int) | Scan failed (Android) |
-| `connecting` | `deviceId` | Connection attempt started |
-| `connected` | `deviceId` | Successfully connected to device |
-| `connectionFailed` | `deviceId`, `status`/`message` | Connection failed |
-| `disconnected` | `deviceId`, `status` (optional) | Device disconnected |
-| `notification` | `deviceId`, `charUuid`, `value` (Uint8List) | Received notification from peripheral |
-| `write_result` | `deviceId`, `charUuid`, `status` | Write operation completed |
-| `write_error` | `deviceId`, `message` | Write operation failed |
-| `mtu_changed` | `deviceId`, `mtu` | MTU successfully changed |
-| `mtu_change_failed` | `deviceId`, `status` | MTU change failed |
-| `bluetooth_state` | `isOn` (bool) | Bluetooth state changed (iOS) |
-| `error` | `message` | General error occurred |
 
 ## API Reference
 
 ### Peripheral Operations
 
-- `startPeripheral(serviceUuid, txUuid, rxUuid)` - Start advertising as peripheral
-- `stopPeripheral()` - Stop advertising
-- `sendNotification(charUuid, value)` - Send notification to subscribed centrals
+| Method | Description |
+|--------|-------------|
+| `startPeripheral(serviceUuid, txUuid, rxUuid)` | Start advertising as peripheral |
+| `stopPeripheral()` | Stop advertising |
+| `sendNotification(charUuid, value)` | Send notification to subscribed centrals |
 
 ### Central Operations
 
-- `startScan(serviceUuid)` - Start scanning (empty string = scan all)
-- `stopScan()` - Stop scanning
-- `connect(deviceId)` - Connect to a device
-- `disconnect(deviceId)` - Disconnect a device
-- `disconnectAll()` - Disconnect all devices
-- `writeCharacteristic(deviceId, charUuid, value)` - Write to a characteristic
-- `requestMtu(deviceId, {mtu: 512})` - Request MTU change (Android only)
+| Method | Description |
+|--------|-------------|
+| `startScan(serviceUuid)` | Start scanning (empty string = scan all) |
+| `stopScan()` | Stop scanning |
+| `connect(deviceId)` | Connect to a device |
+| `disconnect(deviceId)` | Disconnect a device |
+| `disconnectAll()` | Disconnect all devices |
+| `writeCharacteristic(deviceId, charUuid, value)` | Write to a characteristic |
+| `requestMtu(deviceId, {mtu: 512})` | Request MTU change (Android only) |
 
 ### Connection Management
 
-- `getConnectedDevices()` - Get list of connected device IDs
-- `isDeviceConnected(deviceId)` - Check if device is connected
+| Method | Description |
+|--------|-------------|
+| `getConnectedDevices()` | Get list of connected device IDs |
+| `isDeviceConnected(deviceId)` | Check if device is connected |
 
 ### Utilities
 
-- `events` - Stream of BLE events
-- `enableLogs(enable)` - Toggle native logging
-- `isBluetoothOn()` - Check Bluetooth state
-- `stopAll()` - Stop all BLE operations
+| Method | Description |
+|--------|-------------|
+| `events` | Stream of BLE events |
+| `enableLogs(enable)` | Toggle native logging |
+| `isBluetoothOn()` | Check Bluetooth state |
+| `stopAll()` | Stop all BLE operations |
+
+## Event Types
+
+All events are streamed through `ble.events`. Each event has a `type` field:
+
+| Event Type | Fields | Description |
+|------------|--------|-------------|
+| `peripheral_started` | - | Peripheral advertising started |
+| `peripheral_stopped` | - | Peripheral advertising stopped |
+| `server_connected` | `deviceId`, `name` | Central connected to this peripheral |
+| `server_disconnected` | `deviceId` | Central disconnected |
+| `rx` | `charUuid`, `value` (Uint8List), `deviceId` | Received write on RX characteristic |
+| `scan_started` | - | Scanning started |
+| `scan_stopped` | - | Scanning stopped |
+| `scanResult` | `deviceId`, `name`, `rssi` | Device discovered during scan |
+| `connecting` | `deviceId` | Connection attempt started |
+| `connected` | `deviceId` | Successfully connected |
+| `connectionFailed` | `deviceId`, `message` | Connection failed |
+| `disconnected` | `deviceId`, `status` (optional) | Device disconnected |
+| `notification` | `deviceId`, `charUuid`, `value` (Uint8List) | Received notification |
+| `write_result` | `deviceId`, `charUuid`, `status` | Write completed |
+| `write_error` | `deviceId`, `message` | Write failed |
+| `mtu_changed` | `deviceId`, `mtu` | MTU changed |
+| `bluetooth_state` | `isOn` (bool) | Bluetooth state changed (iOS) |
 
 ## Important Notes
 
 ### Device IDs
 
-- **Android**: Uses MAC addresses (e.g., "AA:BB:CC:DD:EE:FF")
-- **iOS**: Uses UUID strings (e.g., "12345678-1234-1234-1234-123456789ABC")
+- **Android**: Uses MAC addresses (e.g., `"AA:BB:CC:DD:EE:FF"`)
+- **iOS**: Uses UUID strings (e.g., `"12345678-1234-1234-1234-123456789ABC"`)
 
 ### UUID Format
 
@@ -349,21 +551,6 @@ Use packages like `permission_handler` for runtime permission handling.
 - Android manufacturer customizations may affect behavior
 - iOS has strict background operation limits
 
-## Platform-Specific Considerations
-
-### Android
-
-- Thread-safe implementation using `ConcurrentHashMap`
-- Supports MTU negotiation up to 512 bytes
-- Requires location permission for scanning on Android 6.0+
-
-### iOS
-
-- All operations run on main queue
-- MTU negotiation is automatic (cannot request specific value)
-- Background operations have restrictions
-- Uses UUID strings for device identification
-
 ## Troubleshooting
 
 ### "Failed to start peripheral"
@@ -392,7 +579,7 @@ Use packages like `permission_handler` for runtime permission handling.
 
 ### iOS: "Bluetooth state unknown"
 
-- Wait for `peripheralManagerDidUpdateState` or `centralManagerDidUpdateState` to be called
+- Wait for Bluetooth state to be determined
 - Check that Bluetooth is enabled in Settings
 
 ## Contributing
@@ -409,4 +596,6 @@ Muhammad Ahmad
 
 ## Support
 
-For issues, feature requests, or questions, please open an issue on [GitHub](https://github.com/muhammadahmad/ble_peripheral_central).
+For issues, feature requests, or questions, please open an issue on [GitHub](https://github.com/MuhammadAhmad2555/ble_peripheral_central).
+
+**Repository**: [https://github.com/MuhammadAhmad2555/ble_peripheral_central](https://github.com/MuhammadAhmad2555/ble_peripheral_central)
