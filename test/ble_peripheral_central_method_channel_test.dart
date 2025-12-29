@@ -1,18 +1,20 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ble_peripheral_central/ble_peripheral_central_method_channel.dart';
+import 'package:ble_peripheral_central/ble_peripheral_central.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  MethodChannelBlePeripheralCentral platform = MethodChannelBlePeripheralCentral();
-  const MethodChannel channel = MethodChannel('ble_peripheral_central');
+  const MethodChannel channel = MethodChannel('ble_peripheral_plugin/methods');
 
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
       channel,
       (MethodCall methodCall) async {
-        return '42';
+        if (methodCall.method == 'isBluetoothOn') {
+          return true;
+        }
+        return null;
       },
     );
   });
@@ -21,7 +23,7 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
   });
 
-  test('getPlatformVersion', () async {
-    expect(await platform.getPlatformVersion(), '42');
+  test('isBluetoothOn returns true', () async {
+    expect(await BlePeripheralPlugin.isBluetoothOn(), true);
   });
 }

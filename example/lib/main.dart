@@ -17,7 +17,6 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
-  final _blePeripheralCentralPlugin = BlePeripheralCentral();
 
   @override
   void initState() {
@@ -28,13 +27,12 @@ class _MyAppState extends State<MyApp> {
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
     String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    // We also handle the message potentially returning null.
+    // Check if Bluetooth is available
     try {
-      platformVersion =
-          await _blePeripheralCentralPlugin.getPlatformVersion() ?? 'Unknown platform version';
+      final isBluetoothOn = await BlePeripheralPlugin.isBluetoothOn();
+      platformVersion = isBluetoothOn ? 'Bluetooth is ON' : 'Bluetooth is OFF';
     } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
+      platformVersion = 'Failed to check Bluetooth state.';
     }
 
     // If the widget was removed from the tree while the asynchronous platform

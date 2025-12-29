@@ -15,11 +15,9 @@ import 'package:ble_peripheral_central/ble_peripheral_central.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('getPlatformVersion test', (WidgetTester tester) async {
-    final BlePeripheralCentral plugin = BlePeripheralCentral();
-    final String? version = await plugin.getPlatformVersion();
-    // The version string depends on the host platform running the test, so
-    // just assert that some non-empty string is returned.
-    expect(version?.isNotEmpty, true);
+  testWidgets('Bluetooth state test', (WidgetTester tester) async {
+    final bool isBluetoothOn = await BlePeripheralPlugin.isBluetoothOn();
+    // Just check that the method returns a boolean value
+    expect(isBluetoothOn, isA<bool>());
   });
 }

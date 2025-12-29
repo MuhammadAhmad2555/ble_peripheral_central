@@ -29,11 +29,11 @@ public class BlePeripheralCentralPlugin: NSObject, FlutterPlugin, FlutterStreamH
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = BlePeripheralCentralPlugin()
         
-        let methodChannel = FlutterMethodChannel(name: "ble_peripheral_central/methods", binaryMessenger: registrar.messenger())
+        let methodChannel = FlutterMethodChannel(name: "ble_peripheral_plugin/methods", binaryMessenger: registrar.messenger())
         registrar.addMethodCallDelegate(instance, channel: methodChannel)
         instance.methodChannel = methodChannel
         
-        let eventChannel = FlutterEventChannel(name: "ble_peripheral_central/events", binaryMessenger: registrar.messenger())
+        let eventChannel = FlutterEventChannel(name: "ble_peripheral_plugin/events", binaryMessenger: registrar.messenger())
         eventChannel.setStreamHandler(instance)
         instance.eventChannel = eventChannel
     }
