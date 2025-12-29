@@ -14,6 +14,7 @@ class BlePeripheralPlugin {
   // ---------------- Enhanced Peripheral Methods (Unchanged) ----------------
 
   /// Start peripheral mode with service/characteristic UUIDs
+
   static Future<void> startPeripheral(
       String serviceUuid, String txUuid, String rxUuid) async {
     await _methodChannel.invokeMethod('startPeripheral', {

@@ -54,28 +54,28 @@ flutter pub get
 
 #### Android
 
-Add to `android/app/src/main/AndroidManifest.xml`:
+**Note:** The plugin's AndroidManifest.xml automatically declares all required Bluetooth permissions, which should be merged into your app's manifest during build. However, if you encounter permission issues, you can explicitly add them to your app's `android/app/src/main/AndroidManifest.xml`:
 
 ```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Bluetooth permissions for Android 12+ (API 31+) -->
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
-        android:usesPermissionFlags="neverForLocation"
-        android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE"
-        android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
-        android:maxSdkVersion="32" />
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     
-    <!-- Legacy Bluetooth permissions -->
+    <!-- Legacy Bluetooth permissions for Android 11 and below (API 30 and below) -->
     <uses-permission android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
     
-    <!-- Location permission (required for scanning) -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Location permission required for BLE scanning on Android 6.0+ to Android 11 -->
+    <!-- Note: Not required for Android 12+ when using BLUETOOTH_SCAN with neverForLocation flag -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="30" />
 </manifest>
 ```
 
