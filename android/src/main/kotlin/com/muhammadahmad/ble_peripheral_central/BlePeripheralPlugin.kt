@@ -1,29 +1,20 @@
-package com.muhammadahmad.ble_peripheral_central
+package com.ammar.ble.ble_peripheral_plugin
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.*
 import android.bluetooth.le.*
 import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.os.ParcelUuid
 import android.util.Log
+import androidx.annotation.NonNull
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugin.common.MethodChannel.MethodCallHandler
-import io.flutter.plugin.common.MethodChannel.Result
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
-/** BlePeripheralCentralPlugin */
-class BlePeripheralCentralPlugin :
-    FlutterPlugin,
-    MethodCallHandler,
+class BlePeripheralPlugin : FlutterPlugin, MethodChannel.MethodCallHandler,
     EventChannel.StreamHandler {
 
     companion object {
@@ -70,7 +61,7 @@ class BlePeripheralCentralPlugin :
     private val connectedDevices = ConcurrentHashMap<String, BluetoothDevice>()
     private val deviceCallbacks = ConcurrentHashMap<String, BluetoothGattCallback>()
 
-    override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+    override fun onAttachedToEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         appContext = binding.applicationContext
         methodChannel = MethodChannel(binding.binaryMessenger, "ble_peripheral_plugin/methods")
         methodChannel.setMethodCallHandler(this)
@@ -85,7 +76,7 @@ class BlePeripheralCentralPlugin :
         logI("Plugin attached with multiple connection support")
     }
 
-    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+    override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         stopAll()
         methodChannel.setMethodCallHandler(null)
         eventChannel.setStreamHandler(null)
@@ -109,14 +100,8 @@ class BlePeripheralCentralPlugin :
                     val serviceUuid = call.argument<String>("serviceUuid")!!
                     val txUuid = call.argument<String>("txUuid")!!
                     val rxUuid = call.argument<String>("rxUuid")!!
-                    try {
-                        startPeripheral(serviceUuid, txUuid, rxUuid)
-                        result.success(null)
-                    } catch (e: SecurityException) {
-                        result.error("PERMISSION_DENIED", e.message, null)
-                    } catch (e: Exception) {
-                        result.error("PLUGIN_ERROR", e.message, null)
-                    }
+                    startPeripheral(serviceUuid, txUuid, rxUuid)
+                    result.success(null)
                 }
 
                 "stopPeripheral" -> {
@@ -133,14 +118,8 @@ class BlePeripheralCentralPlugin :
 
                 "startScan" -> {
                     val serviceUuid = call.argument<String>("serviceUuid")!!
-                    try {
-                        startScan(serviceUuid)
-                        result.success(null)
-                    } catch (e: SecurityException) {
-                        result.error("PERMISSION_DENIED", e.message, null)
-                    } catch (e: Exception) {
-                        result.error("PLUGIN_ERROR", e.message, null)
-                    }
+                    startScan(serviceUuid)
+                    result.success(null)
                 }
 
                 "stopScan" -> {
@@ -150,14 +129,8 @@ class BlePeripheralCentralPlugin :
 
                 "connect" -> {
                     val deviceId = call.argument<String>("deviceId")
-                    try {
-                        connect(deviceId)
-                        result.success(null)
-                    } catch (e: SecurityException) {
-                        result.error("PERMISSION_DENIED", e.message, null)
-                    } catch (e: Exception) {
-                        result.error("PLUGIN_ERROR", e.message, null)
-                    }
+                    connect(deviceId)
+                    result.success(null)
                 }
 
                 "disconnect" -> {
@@ -175,27 +148,15 @@ class BlePeripheralCentralPlugin :
                     val deviceId = call.argument<String>("deviceId")
                     val charUuid = call.argument<String>("charUuid")!!
                     val value = call.argument<ByteArray>("value")!!
-                    try {
-                        writeCharacteristic(deviceId, charUuid, value)
-                        result.success(null)
-                    } catch (e: SecurityException) {
-                        result.error("PERMISSION_DENIED", e.message, null)
-                    } catch (e: Exception) {
-                        result.error("PLUGIN_ERROR", e.message, null)
-                    }
+                    writeCharacteristic(deviceId, charUuid, value)
+                    result.success(null)
                 }
 
                 "requestMtu" -> {
                     val deviceId = call.argument<String>("deviceId")
                     val mtu = call.argument<Int>("mtu") ?: MAX_MTU
-                    try {
-                        requestMtu(deviceId, mtu)
-                        result.success(null)
-                    } catch (e: SecurityException) {
-                        result.error("PERMISSION_DENIED", e.message, null)
-                    } catch (e: Exception) {
-                        result.error("PLUGIN_ERROR", e.message, null)
-                    }
+                    requestMtu(deviceId, mtu)
+                    result.success(null)
                 }
 
                 "getConnectedDevices" -> {
@@ -218,16 +179,6 @@ class BlePeripheralCentralPlugin :
                 "isBluetoothOn" -> {
                     val isOn = bluetoothAdapter?.isEnabled ?: false
                     result.success(isOn)
-                }
-
-                "checkPermissions" -> {
-                    val permissions = mapOf(
-                        "bluetoothConnect" to checkBluetoothConnectPermission(),
-                        "bluetoothAdvertise" to checkBluetoothAdvertisePermission(),
-                        "bluetoothScan" to checkBluetoothScanPermission(),
-                        "location" to checkLocationPermission()
-                    )
-                    result.success(permissions)
                 }
 
                 "stopAll" -> {
@@ -254,127 +205,19 @@ class BlePeripheralCentralPlugin :
             scanner = bluetoothAdapter?.bluetoothLeScanner
     }
 
-    // ---------- Permission Checking ----------
-    
-    private fun hasPermission(permission: String): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            appContext?.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true // Permissions are granted at install time for API < 23
-        }
-    }
-
-    private fun checkBluetoothConnectPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            hasPermission(Manifest.permission.BLUETOOTH_CONNECT)
-        } else {
-            hasPermission(Manifest.permission.BLUETOOTH) && 
-            hasPermission(Manifest.permission.BLUETOOTH_ADMIN)
-        }
-    }
-
-    private fun checkBluetoothAdvertisePermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            hasPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
-        } else {
-            hasPermission(Manifest.permission.BLUETOOTH) && 
-            hasPermission(Manifest.permission.BLUETOOTH_ADMIN)
-        }
-    }
-
-    private fun checkBluetoothScanPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            hasPermission(Manifest.permission.BLUETOOTH_SCAN)
-        } else {
-            hasPermission(Manifest.permission.BLUETOOTH) && 
-            hasPermission(Manifest.permission.BLUETOOTH_ADMIN)
-        }
-    }
-
-    private fun checkLocationPermission(): Boolean {
-        return hasPermission(Manifest.permission.ACCESS_FINE_LOCATION) ||
-               hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
-    }
-
-    private fun getMissingPermissionError(operation: String): String {
-        val missingPermissions = mutableListOf<String>()
-        
-        when (operation) {
-            "peripheral" -> {
-                if (!checkBluetoothConnectPermission()) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        missingPermissions.add("BLUETOOTH_CONNECT")
-                    } else {
-                        missingPermissions.add("BLUETOOTH and BLUETOOTH_ADMIN")
-                    }
-                }
-                if (!checkBluetoothAdvertisePermission()) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        missingPermissions.add("BLUETOOTH_ADVERTISE")
-                    } else {
-                        missingPermissions.add("BLUETOOTH and BLUETOOTH_ADMIN")
-                    }
-                }
-            }
-            "scan" -> {
-                if (!checkBluetoothScanPermission()) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        missingPermissions.add("BLUETOOTH_SCAN")
-                    } else {
-                        missingPermissions.add("BLUETOOTH and BLUETOOTH_ADMIN")
-                    }
-                }
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && !checkLocationPermission()) {
-                    missingPermissions.add("ACCESS_FINE_LOCATION or ACCESS_COARSE_LOCATION")
-                }
-            }
-            "connect" -> {
-                if (!checkBluetoothConnectPermission()) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                        missingPermissions.add("BLUETOOTH_CONNECT")
-                    } else {
-                        missingPermissions.add("BLUETOOTH and BLUETOOTH_ADMIN")
-                    }
-                }
-            }
-        }
-        
-        return if (missingPermissions.isNotEmpty()) {
-            "Missing required permissions: ${missingPermissions.joinToString(", ")}. " +
-            "Please request these permissions before using BLE operations."
-        } else {
-            "Unknown permission error"
-        }
-    }
-
     // ---------- Peripheral (GATT Server + Advertiser) ----------
     // (Unchanged from original)
     private fun startPeripheral(serviceUuidStr: String, txUuidStr: String, rxUuidStr: String) {
-        // Check permissions first
-        if (!checkBluetoothConnectPermission() || !checkBluetoothAdvertisePermission()) {
-            val errorMsg = getMissingPermissionError("peripheral")
-            logE(errorMsg)
-            sendEvent(mapOf("type" to "error", "message" to errorMsg))
-            throw SecurityException(errorMsg)
-        }
-        
         validateInitialization();
         stopPeripheral()
         serverServiceUuid = UUID.fromString(serviceUuidStr)
         serverTxUuid = UUID.fromString(txUuidStr)
         serverRxUuid = UUID.fromString(rxUuidStr)
 
-        try {
-            gattServer = bluetoothManager?.openGattServer(appContext, gattServerCallback)
-            if (gattServer == null) {
-                sendEvent(mapOf("type" to "error", "message" to "Cannot open GATT server"))
-                return
-            }
-        } catch (e: SecurityException) {
-            val errorMsg = getMissingPermissionError("peripheral")
-            logE("$errorMsg: ${e.message}")
-            sendEvent(mapOf("type" to "error", "message" to errorMsg))
-            throw SecurityException(errorMsg, e)
+        gattServer = bluetoothManager?.openGattServer(appContext, gattServerCallback)
+        if (gattServer == null) {
+            sendEvent(mapOf("type" to "error", "message" to "Cannot open GATT server"))
+            return
         }
 
         val service =
@@ -439,14 +282,6 @@ class BlePeripheralCentralPlugin :
     }
 
     private fun sendNotification(charUuidStr: String, value: ByteArray) {
-        // Check permissions first
-        if (!checkBluetoothConnectPermission()) {
-            val errorMsg = getMissingPermissionError("peripheral")
-            logE(errorMsg)
-            sendEvent(mapOf("type" to "error", "message" to errorMsg))
-            return
-        }
-        
         if (gattServer == null) {
             logW("No gatt server to notify")
             return
@@ -557,22 +392,6 @@ class BlePeripheralCentralPlugin :
 
     @SuppressLint("MissingPermission")
     private fun startScan(serviceUuidStr: String) {
-        // Check permissions first
-        if (!checkBluetoothScanPermission()) {
-            val errorMsg = getMissingPermissionError("scan")
-            logE(errorMsg)
-            sendEvent(mapOf("type" to "scan_error", "message" to errorMsg))
-            throw SecurityException(errorMsg)
-        }
-        
-        // Check location permission for Android < 12
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && !checkLocationPermission()) {
-            val errorMsg = getMissingPermissionError("scan")
-            logE(errorMsg)
-            sendEvent(mapOf("type" to "scan_error", "message" to errorMsg))
-            throw SecurityException(errorMsg)
-        }
-        
         try {
             val filter = ScanFilter.Builder()
                 .setServiceUuid(ParcelUuid(UUID.fromString(serviceUuidStr)))
@@ -633,18 +452,6 @@ class BlePeripheralCentralPlugin :
             return
         }
 
-        // Check permissions first
-        if (!checkBluetoothConnectPermission()) {
-            val errorMsg = getMissingPermissionError("connect")
-            logE(errorMsg)
-            sendEvent(mapOf(
-                "type" to "connectionFailed",
-                "deviceId" to deviceId,
-                "message" to errorMsg
-            ))
-            throw SecurityException(errorMsg)
-        }
-
         // Check if already connected or connecting
         if (gattClients.containsKey(deviceId)) {
             logW("Already connected or connecting to $deviceId")
@@ -701,17 +508,6 @@ class BlePeripheralCentralPlugin :
             return
         }
 
-        // Check permissions first
-        if (!checkBluetoothConnectPermission()) {
-            val errorMsg = getMissingPermissionError("connect")
-            logE(errorMsg)
-            // Don't throw for disconnect, just log and clean up
-            gattClients.remove(deviceId)
-            connectedDevices.remove(deviceId)
-            deviceCallbacks.remove(deviceId)
-            return
-        }
-
         try {
             val gatt = gattClients[deviceId]
             if (gatt != null) {
@@ -754,18 +550,6 @@ class BlePeripheralCentralPlugin :
         if (deviceId == null) {
             logE("writeCharacteristic called with null deviceId")
             return
-        }
-
-        // Check permissions first
-        if (!checkBluetoothConnectPermission()) {
-            val errorMsg = getMissingPermissionError("connect")
-            logE(errorMsg)
-            sendEvent(mapOf(
-                "type" to "write_error",
-                "deviceId" to deviceId,
-                "message" to errorMsg
-            ))
-            throw SecurityException(errorMsg)
         }
 
         try {
@@ -822,13 +606,6 @@ class BlePeripheralCentralPlugin :
         if (deviceId == null) {
             logE("requestMtu called with null deviceId")
             return
-        }
-
-        // Check permissions first
-        if (!checkBluetoothConnectPermission()) {
-            val errorMsg = getMissingPermissionError("connect")
-            logE(errorMsg)
-            throw SecurityException(errorMsg)
         }
 
         try {

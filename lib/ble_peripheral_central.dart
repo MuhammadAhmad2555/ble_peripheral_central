@@ -116,6 +116,42 @@ class BlePeripheralPlugin {
     return result ?? false;
   }
 
+  /// Check if required BLE permissions are granted (Android only)
+  /// Returns a map with permission status:
+  /// - bluetoothConnect: bool
+  /// - bluetoothAdvertise: bool
+  /// - bluetoothScan: bool
+  /// - location: bool
+  /// On iOS, returns all true (permissions handled automatically)
+  static Future<Map<String, bool>> checkPermissions() async {
+    try {
+      final result = await _methodChannel.invokeMethod<Map<dynamic, dynamic>>('checkPermissions');
+      if (result == null) {
+        // iOS doesn't implement this, return all true
+        return {
+          'bluetoothConnect': true,
+          'bluetoothAdvertise': true,
+          'bluetoothScan': true,
+          'location': true,
+        };
+      }
+      return {
+        'bluetoothConnect': result['bluetoothConnect'] as bool? ?? false,
+        'bluetoothAdvertise': result['bluetoothAdvertise'] as bool? ?? false,
+        'bluetoothScan': result['bluetoothScan'] as bool? ?? false,
+        'location': result['location'] as bool? ?? false,
+      };
+    } catch (e) {
+      // iOS or error, return all true
+      return {
+        'bluetoothConnect': true,
+        'bluetoothAdvertise': true,
+        'bluetoothScan': true,
+        'location': true,
+      };
+    }
+  }
+
   /// Stop all BLE operations (peripheral + central)
   static Future<void> stopAll() async {
     await _methodChannel.invokeMethod('stopAll');
