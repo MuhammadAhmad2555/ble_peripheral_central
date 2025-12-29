@@ -119,10 +119,11 @@ class BlePeripheralPlugin {
 
   /// Check if required BLE permissions are granted (Android only)
   /// Returns a map with permission status:
-  /// - bluetoothConnect: bool
-  /// - bluetoothAdvertise: bool
-  /// - bluetoothScan: bool
-  /// - location: bool
+  /// - bluetoothConnect: bool - Whether BLUETOOTH_CONNECT is granted
+  /// - bluetoothAdvertise: bool - Whether BLUETOOTH_ADVERTISE is granted
+  /// - bluetoothScan: bool - Whether BLUETOOTH_SCAN is granted
+  /// - location: bool - Whether location is granted (or not needed on Android 12+)
+  /// - locationRequired: bool - Whether location permission is actually required (false on Android 12+)
   /// On iOS, returns all true (permissions handled automatically)
   static Future<Map<String, bool>> checkPermissions() async {
     try {
@@ -134,6 +135,7 @@ class BlePeripheralPlugin {
           'bluetoothAdvertise': true,
           'bluetoothScan': true,
           'location': true,
+          'locationRequired': false,
         };
       }
       return {
@@ -141,6 +143,7 @@ class BlePeripheralPlugin {
         'bluetoothAdvertise': result['bluetoothAdvertise'] as bool? ?? false,
         'bluetoothScan': result['bluetoothScan'] as bool? ?? false,
         'location': result['location'] as bool? ?? false,
+        'locationRequired': result['locationRequired'] as bool? ?? false,
       };
     } catch (e) {
       // iOS or error, return all true
@@ -149,6 +152,7 @@ class BlePeripheralPlugin {
         'bluetoothAdvertise': true,
         'bluetoothScan': true,
         'location': true,
+        'locationRequired': false,
       };
     }
   }

@@ -102,6 +102,8 @@ Add to `ios/Runner/Info.plist`:
 
 ### 2. Request Runtime Permissions
 
+**⚠️ Important:** On Android 12+ (API 31+), **do NOT request location permissions** - they are not needed when using `BLUETOOTH_SCAN` with the `neverForLocation` flag. Only request location on Android 11 and below.
+
 Install `permission_handler`:
 
 ```yaml
@@ -114,17 +116,105 @@ Request permissions in your code:
 ```dart
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
+import 'dart:io' show Platform;
 
 Future<void> requestBluetoothPermissions() async {
   if (Platform.isAndroid) {
+    // Always request Bluetooth permissions (works on all Android versions)
     await Permission.bluetoothScan.request();
     await Permission.bluetoothAdvertise.request();
     await Permission.bluetoothConnect.request();
-    await Permission.location.request(); // Required for scanning
+    
+    // Location permission is ONLY needed on Android 11 and below (API 30 and below)
+    // On Android 12+, BLUETOOTH_SCAN with neverForLocation flag replaces location permission
+    // Check if we're on Android < 12 by checking if location permission is actually needed
+    try {
+      // Try to check if we're on Android 12+ by checking if BLUETOOTH_SCAN is available
+      final bluetoothScanStatus = await Permission.bluetoothScan.status;
+      
+      // If BLUETOOTH_SCAN is available and granted, we're likely on Android 12+
+      // Only request location if BLUETOOTH_SCAN is not available or denied
+      if (bluetoothScanStatus.isDenied || bluetoothScanStatus.isPermanentlyDenied) {
+        // Might be Android < 12, request location permission
+        await Permission.location.request();
+      }
+      // If BLUETOOTH_SCAN is granted, we don't need location (Android 12+)
+    } catch (e) {
+      // Fallback: request location permission if we can't determine Android version
+      // This is safe - on Android 12+ it will be ignored, on Android < 12 it's required
+      await Permission.location.request();
+    }
   }
   // iOS permissions are requested automatically
 }
 ```
+
+**Simpler alternative** (if you know your minSdkVersion):
+
+```dart
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
+
+Future<void> requestBluetoothPermissions() async {
+  if (Platform.isAndroid) {
+    final deviceInfo = DeviceInfoPlugin();
+    final androidInfo = await deviceInfo.androidInfo;
+    final sdkInt = androidInfo.version.sdkInt;
+    
+    // Request Bluetooth permissions
+    await Permission.bluetoothScan.request();
+    await Permission.bluetoothAdvertise.request();
+    await Permission.bluetoothConnect.request();
+    
+    // Only request location on Android 11 and below
+    if (sdkInt < 31) {
+      await Permission.location.request();
+    }
+  }
+  // iOS permissions are requested automatically
+}
+```
+
+**Recommended approach** (using plugin's `checkPermissions()`):
+
+```dart
+import 'package:permission_handler/permission_handler.dart';
+import 'package:ble_peripheral_central/ble_peripheral_central.dart';
+import 'dart:io';
+
+Future<void> requestBluetoothPermissions() async {
+  if (Platform.isAndroid) {
+    // Check current permission status
+    final permissions = await BlePeripheralPlugin.checkPermissions();
+    
+    // Request Bluetooth permissions if needed
+    if (!permissions['bluetoothScan']!) {
+      await Permission.bluetoothScan.request();
+    }
+    if (!permissions['bluetoothAdvertise']!) {
+      await Permission.bluetoothAdvertise.request();
+    }
+    if (!permissions['bluetoothConnect']!) {
+      await Permission.bluetoothConnect.request();
+    }
+    
+    // Only request location if it's actually required (Android < 12)
+    // On Android 12+, locationRequired will be false
+    if (permissions['locationRequired'] == true && !permissions['location']!) {
+      await Permission.location.request();
+    }
+    // Note: On Android 12+, location permission is NOT needed and will show as denied
+    // This is expected and OK - you can ignore location permission status on Android 12+
+  }
+  // iOS permissions are requested automatically
+}
+```
+
+**Important:** 
+- On **Android 12+ (API 31+)**: Location permissions are **NOT required** when using `BLUETOOTH_SCAN` with the `neverForLocation` flag
+- On **Android 11 and below (API 30 and below)**: Location permission **IS required** for BLE scanning
+- Use `BlePeripheralPlugin.checkPermissions()` to determine which permissions are actually needed on the current device
 
 ### 3. Basic Usage
 

@@ -221,11 +221,13 @@ class BlePeripheralCentralPlugin :
                 }
 
                 "checkPermissions" -> {
+                    val sdkVersion = Build.VERSION.SDK_INT
                     val permissions = mapOf(
                         "bluetoothConnect" to checkBluetoothConnectPermission(),
                         "bluetoothAdvertise" to checkBluetoothAdvertisePermission(),
                         "bluetoothScan" to checkBluetoothScanPermission(),
-                        "location" to checkLocationPermission()
+                        "location" to checkLocationPermission(),
+                        "locationRequired" to (sdkVersion < Build.VERSION_CODES.S) // Only required on Android < 12
                     )
                     result.success(permissions)
                 }
@@ -292,6 +294,12 @@ class BlePeripheralCentralPlugin :
     }
 
     private fun checkLocationPermission(): Boolean {
+        // On Android 12+ (API 31+), location permission is NOT required for BLE scanning
+        // when using BLUETOOTH_SCAN with neverForLocation flag
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return true // Location not needed on Android 12+
+        }
+        // On Android 11 and below, location permission IS required
         return hasPermission(Manifest.permission.ACCESS_FINE_LOCATION) ||
                hasPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
     }
