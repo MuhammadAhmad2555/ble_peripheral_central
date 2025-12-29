@@ -202,6 +202,8 @@ Future<void> requestBluetoothPermissions() async {
     // Only request location if it's actually required (Android < 12)
     // On Android 12+, locationRequired will be false
     if (permissions['locationRequired'] == true && !permissions['location']!) {
+      // Use Permission.location (foreground location) - NOT locationAlways
+      // Background location (locationAlways) is NOT needed for BLE scanning
       await Permission.location.request();
     }
     // Note: On Android 12+, location permission is NOT needed and will show as denied
@@ -215,6 +217,12 @@ Future<void> requestBluetoothPermissions() async {
 - On **Android 12+ (API 31+)**: Location permissions are **NOT required** when using `BLUETOOTH_SCAN` with the `neverForLocation` flag
 - On **Android 11 and below (API 30 and below)**: Location permission **IS required** for BLE scanning
 - Use `BlePeripheralPlugin.checkPermissions()` to determine which permissions are actually needed on the current device
+
+**Location Permission Types:**
+- `Permission.location` - **Use this** for BLE scanning (foreground location access)
+- `Permission.locationAlways` - **Do NOT use** for BLE (background location, not needed for BLE)
+
+BLE scanning only requires **foreground location permission** (`Permission.location`), not background location (`Permission.locationAlways`). Background location is only needed if your app needs to scan for BLE devices while the app is in the background, which requires additional justification for Google Play Store.
 
 ### 3. Basic Usage
 
